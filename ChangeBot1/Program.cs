@@ -23,9 +23,8 @@ namespace ChangeBot1
             string[] moneyNames = { "One Hundred", "Fifty", "Twenty", "Ten", "Five", "Dollar", "Half Dollar", "Quarter", "Dime", "Nickel", "Penny" };
             decimal[] moneyValue = { 100.00m, 50.00m, 20.00m, 10.00m, 5.00m, 1.00m, .50m, .25m, .10m, .05m, .01m };
             int[] drawerBillCount = { 1, 2, 4, 5, 8, 21, 5, 20, 28, 20, 20 };
-            int[] drawerBillCount1 = { 1, 1, 0, 1, 4, 1, 1, 1, 1, 1, 1 }; //test money amount array
-            //int[] drawerBillCount1 = { 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1 };
-            money = new Bank[moneyNames.Length];//ccreate an instance of money
+            //int[] drawerBillCount1 = { 1, 1, 0, 1, 4, 1, 1, 1, 1, 1, 1 }; //test array
+            money = new Bank[moneyNames.Length];//create an instance of money
 
             //declare and intialize variables 
             decimal itemPrice, purchasePrice = 0.00m;
@@ -40,16 +39,16 @@ namespace ChangeBot1
             string transactionResponse = "";
             #endregion
 
-
             #region  BOOT UP DATA FOR CASH CHECK
             //SETUP BOOT UP CASH
             while (index < 11)
             //store preloaded information into kiosk
             {
-                money[index].stored = drawerBillCount1[index];//global money drawer array set to local money drawer
+                money[index].stored = drawerBillCount[index];//global money drawer array set to local money drawer
                 index++;
             }
             #endregion
+
             while (transactionOn)//loop to allow customers to continue making transactions
             {
 
@@ -60,13 +59,12 @@ namespace ChangeBot1
                 {
                     Console.Write("Item {0}: ", itemNum);
 
-
                     //break if no input value
                     input = Console.ReadLine();
                     if (input == "")
                     {
                         break;
-                    }
+                    }//end if
 
                     //format the discount price to have two decimal places
                     formattedInput = string.Format("{0:0.00}", input);
@@ -90,15 +88,13 @@ namespace ChangeBot1
 
 
                     //check payment for valid payment amount
-                    bool paymentCheck = PaymentCheck(payment, moneyValue, drawerBillCount1); //set bool equal to PaymentCheck function
-
-                    
+                    bool paymentCheck = PaymentCheck(payment, moneyValue, drawerBillCount); //set bool equal to PaymentCheck function
+ 
                     if(paymentCheck == false)
                     {
                         Console.WriteLine("Please enter a valid payment amount.");
                         totalPayment = totalPayment - payment;
                         paymentNum -= 1;
-
                     }
 
                     totalPayment += payment;
@@ -131,20 +127,19 @@ namespace ChangeBot1
                     Console.WriteLine("Kiosk does not have enough money to dispense change! Please enter another form of payment.");
                 }//end if
 
-                ChangeDispense(changeDue, enoughChange, moneyValue, drawerBillCount1);
+                ChangeDispense(changeDue, enoughChange, moneyValue, drawerBillCount);
 
                 paymentNum = 1;//reset paymentNum
                 itemNum = 1;//reset itemNum
 
-                Console.WriteLine("Do you want to do another transaction? Please enter Y or N");
+                Console.Write("\nDo you want to do another transaction? Please enter Y or N:  ");
                 transactionResponse = Console.ReadLine();
 
                 if (transactionResponse == "No" || transactionResponse == "N" || transactionResponse == "n" || transactionResponse == "no")
                 {
                     transactionOn = false;//turns off transaction loop
                 }//end if
-                Console.WriteLine("\n\n");
-
+                Console.WriteLine("\n");
             }//end while loop
             Console.ReadKey();
         }//end main function
@@ -165,12 +160,11 @@ namespace ChangeBot1
                         
                    Console.WriteLine($"{moneyAmount[count]:c} dispensed");//display the dispensed change
 
-
                     if (change_needed == 0)
                     {
                         Console.WriteLine("\n-----Transaction Complete-----");
 
-                    }
+                    }//end nested if
                 }
                 else if (drawerAmount[count] <0)
                 {
@@ -181,8 +175,7 @@ namespace ChangeBot1
                 {
                     count += 1;
 
-                }//end if     
-               
+                }//end if              
             }//end while loop
         }//end function
         #endregion
@@ -216,16 +209,17 @@ namespace ChangeBot1
 
 
                     }//end nested if
+
                     //returns false if money makes it to the end of money drawer without zeroing out
                     if(money[10].stored == 0 && i == 10)
                     {
                         return false;
                     }//end nested if
+
                     //returns true if change zeros out
                     if( money[i].stored >= 0 && change_due == 0)
                     {
                         return true;// make bool true if no change remains and bill/coin count is zero or more
-
                     }//end nested if
                 }
                 else
@@ -250,19 +244,18 @@ namespace ChangeBot1
             {
                 if(payments == moneyValue[x])
                 {
-                    moneyValue[x] += 1;//increase value of money drawer
+                    
+                    moneyStored[x] += 1;//increase value of money drawer
                     return true;
-                }
+                }//end if
+
                 if(payments != moneyValue[x] && x == 10)
                 {
                      return false;
-                }
-               
-            }
-
-
+                }//end if
+            }//end for loop
             return false;
-        }
+        }//end function
 
         #endregion
     }//end program class
