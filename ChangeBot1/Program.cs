@@ -51,10 +51,11 @@ namespace ChangeBot1
             bool checkValidCard = false;
             decimal cashBackPurchasePrice = 0.0m;
             decimal valBankRequest = 0.0m;
+            decimal formatted_valBankRequest = 0.0m;
             decimal remainingCashBackPrice = 0.0m;
             bool transactionComplete = false;
             string[] bankRequest;
-            bool cardDeclined = false;
+            bool cardDeclinedHalfpayment = false;
 
 
             #endregion
@@ -118,6 +119,8 @@ namespace ChangeBot1
                             //only runs if paying with a card
                             if (payCard == true)
                             {
+                                Console.WriteLine($"Total: {cashBackAmount + purchasePrice}");
+
                                 Console.Write("\nPlease enter your card number:   ");
                                 cardNumber = Convert.ToInt64(Console.ReadLine());
 
@@ -167,35 +170,38 @@ namespace ChangeBot1
                                         Console.WriteLine("-----Please pay another way!-----");                                       
                                         transactionComplete = false;
                                         //checkValidCard = false;
-                                        cardDeclined = true;                                       
+                                        cardDeclinedHalfpayment = true;                                       
                                     }//end if 
 
                                     if (bankRequest[1] != "declined")
                                     {
-                                        valBankRequest = Convert.ToDecimal(bankRequest[1]);
+                                        valBankRequest = Convert.ToDecimal( bankRequest[1]);
+                                        formatted_valBankRequest = Math.Round(valBankRequest, 2);
+                                       
                                         //card complete paid
                                         if (valBankRequest > 0 && valBankRequest == cashBackPurchasePrice)
                                         {
                                             Console.WriteLine($"Total: {cashBackAmount + purchasePrice}");
-                                            Console.WriteLine("Your {0} card will be charged {1}", cardVendor, valBankRequest);
+                                            Console.WriteLine("Your {0} card will be charged {1}", cardVendor, formatted_valBankRequest);
                                             Console.WriteLine("------Transaction Complete!!!_____");
                                             transactionComplete = true;
                                         }
                                         //card partial paid
                                         else if (valBankRequest > 0 && valBankRequest != cashBackPurchasePrice)
                                         {
-                                            Console.WriteLine("Your {0} card will be charged {1}", cardVendor, valBankRequest);
-                                            remainingCashBackPrice = cashBackPurchasePrice - valBankRequest;
+                                           
+                                            Console.WriteLine("Your {0} card will be charged {1}", cardVendor, formatted_valBankRequest);
+                                            remainingCashBackPrice = cashBackPurchasePrice - formatted_valBankRequest;
                                             transactionComplete = false;
                                             Console.WriteLine("Your reamaing balance is {0}", remainingCashBackPrice);
                                             purchasePrice = remainingCashBackPrice;
-                                            cardDeclined = true;//used to set validCard to false
+                                            cardDeclinedHalfpayment= true;//used to set validCard to false
                                         }//end if
                                     }//end if
                                 } //end if                            
                             }//end if
                         }//end if 
-                        if (cardDeclined == true)
+                        if (cardDeclinedHalfpayment== true)
                         {
                             checkValidCard = false;
                         }
@@ -238,8 +244,11 @@ namespace ChangeBot1
                         //Absoulte value of change (gets rid of negative sign)
                         changeDue = Math.Abs(remaining);
 
+                        //total amount paid
+                        Console.WriteLine("\n\nTotal Cash Paid: {0}", totalPayment);
+
                         //Change due
-                        Console.Write("\n\nChange     {0:c}", changeDue);
+                        Console.Write("\nChange     {0:c}", changeDue);
                         Console.Write("\n_ _ _ _ \n\n");
 
                         //call enoughChange function
@@ -368,7 +377,6 @@ namespace ChangeBot1
             }//end while loop
             return false;
         }//end function  
-
         #endregion
 
         #region CHECK RIGHT PAYMENT AMOUNT
