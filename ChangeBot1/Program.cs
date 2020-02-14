@@ -9,14 +9,18 @@ namespace ChangeBot1
     class Program
     {
         #region GLOBAL VARIABLES
-        struct Bank
-        {
-            public int stored; // how many of each is stored in the bank (upon start up)
-        }
-        static Bank[] money;
+        struct Tender {
+            public int Count; // how many of each is stored in the bank (upon start up)
+            public decimal Value;
+        }//end struct
+
+        static Tender[] cashBox;
+
         static decimal cashBackAmount = 0.0m;
         #endregion
 
+        const int MAX_TENDER_SLOT = 10;
+        const int PENNY_SLOT = 10;
         static void Main(string[] args)
         {
             #region VARIABLES
@@ -25,290 +29,130 @@ namespace ChangeBot1
             decimal[] moneyValue = { 100.00m, 50.00m, 20.00m, 10.00m, 5.00m, 1.00m, .50m, .25m, .10m, .05m, .01m };
             int[] drawerBillCount = { 1, 2, 4, 5, 8, 21, 5, 20, 28, 20, 20 };
             //int[] drawerBillCount1 = { 1, 1, 0, 1, 4, 1, 1, 1, 1, 1, 1 }; //test array
-            money = new Bank[moneyNames.Length];//create an instance of money
-
-            //string[] cardNames = { "Visa", "MasterCard", "American Express", "Discover" };
-
+            cashBox = new Tender[moneyNames.Length];//create an instance of money
 
             //declare and intialize variables 
-            decimal itemPrice, purchasePrice = 0.00m;
-            decimal remaining = 0.00m;
-            decimal payment, totalPayment = 0.00m;
-            int itemNum = 1;
-            int paymentNum = 1;
-            string input, formattedInput = "";
-            decimal changeDue = 0.00m;
+            decimal purchasePrice = 0.00m;
             int index = 0;
-            bool transactionOn = true;
-            string transactionResponse = "";
-
+            bool transactionOn = true;         
             bool payCard = false;
-            long cardNumber = 0;
-            string convertedCardNumber = "";
-            bool validCardNum = false;
-            long cardFirstDigit = 0;
-            string cardVendor = "";
-            bool checkValidCard = false;
-            decimal cashBackPurchasePrice = 0.0m;
-            decimal valBankRequest = 0.0m;
-            decimal formatted_valBankRequest = 0.0m;
-            decimal remainingCashBackPrice = 0.0m;
             bool transactionComplete = false;
-            string[] bankRequest;
-            bool cardDeclinedHalfpayment = false;
-
-
             #endregion
 
             #region  BOOT UP DATA FOR CASH DRAWER CHECK
             //SETUP BOOT UP CASH
             while (index < 11)
-            //store preloaded information into kiosk
+            //STORE PRELOADED INFORMATION INTO KIOSK
             {
-                money[index].stored = drawerBillCount[index];//global money drawer array set to local money drawer
+                //GLOBAL MONEY DRAWER ARRAY SET TO LOCAL MONEY DRAWER
+                cashBox[index].Count = drawerBillCount[index];
+                cashBox[index].Value = moneyValue[index];
                 index++;
             }
             #endregion
 
-            #region SCANNING ITEMS
-            while (transactionOn)//loop to allow customers to continue making transactions
+            
+            while (transactionOn)//LOOP FOR MULTIPLE TRANSACTIONS
             {
-                //Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("You may begin scanning your items!\n");
+                //CALL FUNCTION TO SCAN ITEMS
+                purchasePrice = ScanItems();              
 
-                // loop to get price of items being purchased
-                do
+            //LOOP FOR CONTINUOUS TRANSACTIONS
+            while (transactionComplete == false)
                 {
-                    Console.Write("Item {0}: ", itemNum);
+                    //ACCEPT CARD                
+                    payCard = AskPayWithCard(purchasePrice);//CALL FUNCTION TO CHECK IF PAYING WITH A CARD
 
-                    //break if no input value
-                    input = Console.ReadLine();
-                    if (input == "")
-                    {
-                        break;
-                    }//end if
-
-                    //format the discount price to have two decimal places
-                    formattedInput = string.Format("{0:0.00}", input);
-
-                    //convert input price to double for calculations
-                    itemPrice = Convert.ToDecimal(input);
-                    
-
-                    Console.WriteLine("Please place item in bagging area!\n");
-                    itemNum += 1;
-                    purchasePrice += itemPrice;
-                } while (input != "");//end do while loop
-
-                // Total price display
-                Console.Write("\n\nTotal {0:c}", purchasePrice);
-                #endregion
-                while (transactionComplete == false)
-                {
-                    payCard = PayWithCard(purchasePrice);
-                if (payCard == true)
-                {
-                    CashBack(purchasePrice);
-                }//end if
-                
                     if (payCard == true)
                     {
-                        //loop runs as long as there is no valid card number
-                        while (checkValidCard == false)
-                        {
-                            //only runs if paying with a card
-                            if (payCard == true)
-                            {
-                                Console.WriteLine($"Total: {cashBackAmount + purchasePrice}");
+                        //CHECK IF CASH BACK NEEDED
+                        CheckCashBack(purchasePrice);
 
-                                Console.Write("\nPlease enter your card number:   ");
-                                cardNumber = Convert.ToInt64(Console.ReadLine());
-
-                                //convert card number to string value
-                                convertedCardNumber = Convert.ToString(cardNumber);
-
-                                //call function to get first digit
-                                cardFirstDigit = CardNumberFirstDigit(cardNumber);
-
-                                //call function to check for valid card number
-                                validCardNum = IsCardNumberValid(convertedCardNumber);
-
-
-                                if (validCardNum == true && cardFirstDigit == 3 || cardFirstDigit == 4 || cardFirstDigit == 5 || cardFirstDigit == 6)
-                                {
-
-                                    if (convertedCardNumber.Length >= 15 && convertedCardNumber.Length <= 16)
-                                    {
-                                        cardVendor = CardVendor(cardFirstDigit);
-                                        //set valid card to true
-                                        checkValidCard = true;
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine("Not a valid card number.");
-                                        checkValidCard = false;
-                                    }//end if
-                                }
-                                else
-                                {
-                                    Console.WriteLine("Not a vaild card number.");
-                                    checkValidCard = false;
-                                }//end if 
-
-                                //checkValidCard only runs if card is valid
-                                if (checkValidCard == true)
-                                {
-                                    cashBackPurchasePrice = purchasePrice + cashBackAmount;
-                                    //function simulating bank sending back request
-                                    bankRequest = MoneyRequest(convertedCardNumber, cashBackPurchasePrice);
-                                   
-                                    if (bankRequest[1] == "declined")
-                                    {
-                                        Console.WriteLine("Card Declined!!!!");
-                                        //show remaining balance without cash back included
-                                        Console.WriteLine("Remaining Balance: {0}", purchasePrice);
-                                        Console.WriteLine("-----Please pay another way!-----");                                       
-                                        transactionComplete = false;
-                                        //checkValidCard = false;
-                                        cardDeclinedHalfpayment = true;                                       
-                                    }//end if 
-
-                                    if (bankRequest[1] != "declined")
-                                    {
-                                        valBankRequest = Convert.ToDecimal( bankRequest[1]);
-                                        formatted_valBankRequest = Math.Round(valBankRequest, 2);
-                                       
-                                        //card complete paid
-                                        if (valBankRequest > 0 && valBankRequest == cashBackPurchasePrice)
-                                        {
-                                            Console.WriteLine($"Total: {cashBackAmount + purchasePrice}");
-                                            Console.WriteLine("Your {0} card will be charged {1}", cardVendor, formatted_valBankRequest);
-                                            Console.WriteLine("------Transaction Complete!!!_____");
-                                            transactionComplete = true;
-                                        }
-                                        //card partial paid
-                                        else if (valBankRequest > 0 && valBankRequest != cashBackPurchasePrice)
-                                        {
-                                           
-                                            Console.WriteLine("Your {0} card will be charged {1}", cardVendor, formatted_valBankRequest);
-                                            remainingCashBackPrice = cashBackPurchasePrice - formatted_valBankRequest;
-                                            transactionComplete = false;
-                                            Console.WriteLine("Your reamaing balance is {0}", remainingCashBackPrice);
-                                            purchasePrice = remainingCashBackPrice;
-                                            cardDeclinedHalfpayment= true;//used to set validCard to false
-                                        }//end if
-                                    }//end if
-                                } //end if                            
-                            }//end if
-                        }//end if 
-                        if (cardDeclinedHalfpayment== true)
-                        {
-                            checkValidCard = false;
-                        }
-
-                    }//end while loop
-                    if (payCard == false)
+                        //SET BOOL EQUAL TO ACCEPTCARD FUNCTION
+                        transactionComplete = AcceptCard(ref purchasePrice);//PASS PURCHASE PRICE BY REFERENCE TO GET UPDATED PURCHASE PRICE FROM FUNCTION
+                    }//end if   
+                    
+                    //ACCEPT CASH                 
+                    else if (payCard == false)
                     {
-                        //loop to accept payment amounts 
-                        while (totalPayment <= purchasePrice)
-                        {
-                            Console.Write("\n\nPayment {0}  ", paymentNum);
-                            payment = Convert.ToDecimal(Console.ReadLine());
-
-
-                            //check payment for valid payment amount
-                            bool paymentCheck = CashPaymentCheck(payment, moneyValue, drawerBillCount); //set bool equal to PaymentCheck function
-
-                            if (paymentCheck == false)
-                            {
-
-                                Console.WriteLine("Please enter a valid payment amount.");
-                                totalPayment = totalPayment - payment;
-                                paymentNum -= 1;
-                            }//end if
-
-                            totalPayment += payment;
-                            remaining = purchasePrice - totalPayment; //subtract payment from purchase price and set it to remaining
-                            paymentNum += 1;
-
-                            if (totalPayment > purchasePrice)
-                            {
-                                break;//exit loop if total payment is higher than sum of items
-                            }//end if 
-
-                            //Remaining change to be payed
-                            Console.Write("Remaining  {0:c}", remaining);
-                        }//end while loop
-
-                        remaining = Math.Round(remaining, 2);
-                        //Absoulte value of change (gets rid of negative sign)
-                        changeDue = Math.Abs(remaining);
-
-                        //total amount paid
-                        Console.WriteLine("\n\nTotal Cash Paid: {0}", totalPayment);
-
-                        //Change due
-                        Console.Write("\nChange     {0:c}", changeDue);
-                        Console.Write("\n_ _ _ _ \n\n");
-
-                        //call enoughChange function
-                        bool enoughChange = EnoughChange(changeDue, moneyValue);
-
-                        if (enoughChange == false)//there is enough money
-                        {
-                            //display message if enoughChange equals false (there is not enough money)
-                            Console.WriteLine("Kiosk does not have enough money to dispense change! Please enter another form of payment.");
-                        }//end if
-
-                        ChangeDispense(changeDue, enoughChange, moneyValue, drawerBillCount);//dispense change
-                        transactionComplete = true;
-                    }//end if
+                        //SET BOOL EQUAL TO ACCEPTCASH FUNCTION
+                        transactionComplete = AcceptCash(purchasePrice);
+                    }//end if            
                 }//end while
 
-                //reset variables
-                paymentNum = 1;
-                itemNum = 1;
-                cashBackAmount = 0;
-                checkValidCard = false;
+            
+                //RESET VARIABLES
                 payCard = false;
                 transactionComplete = false;
                 purchasePrice = 0.0m;
 
-
-                Console.Write("\nDo you want to do another transaction? Please enter y or n:  ");
-                transactionResponse = Console.ReadLine();
-
-                if (transactionResponse == "No" || transactionResponse == "N" || transactionResponse == "n" || transactionResponse == "no")
-                {
-                    transactionOn = false;//turns off transaction loop
-                }//end if
-                Console.WriteLine("\n");
             }//end while loop
             Console.ReadKey();
         }//end main function
 
+        public static decimal ScanItems()
+        {
+            int itemNum = 1;
+            string inputPrice = "";
+            decimal itemPrice = 0.0m;
+            decimal purchasePrice = 0.0m;
+            Console.WriteLine("You may begin scanning your items!\n");
 
-        #region DISPENSE CHANGE
-        public static void ChangeDispense(decimal change_needed, bool enoughChange, decimal[] moneyAmount, int[] drawerAmount)
+            //LOOP FOR ITEM PRICE
+            do
+            {
+                Console.Write("Item {0}: ", itemNum);
+
+                //BREAK IF NO INPUT VALUE
+                inputPrice = Console.ReadLine();
+                if (inputPrice == "")
+                {
+                    break;
+                }//end if
+
+                //FORMAT DISCOUNTPRICE TO TWO DECIMAL PLACES
+                //formattedInput = string.Format("{0:0.00}", inputPrice);
+
+                //INPUT INTO DECIMAL FOR CALCULATIONS
+                itemPrice = Convert.ToDecimal(inputPrice);
+
+
+                Console.WriteLine("Please place item in bagging area!\n");
+                itemNum += 1;
+                purchasePrice += itemPrice;
+
+            } while (inputPrice != "");//end do while loop
+
+            //TOTAL PRICE DISPLAY
+            Console.Write("\n\nTotal {0:c}", purchasePrice);
+            return purchasePrice;       
+        }//end function
+
+        public static void DispenseChange(decimal change_needed, decimal[] moneyAmount, int[] drawerAmount)
         {
             int count = 0;
-            //loop through to display dispensed money
-            while (change_needed > 0 && enoughChange == true)
+            //LOOP TO DISPLAY DISPENSED MONEY/CHANGE
+            while (change_needed > 0)
             {
                 if (change_needed >= moneyAmount[count] && drawerAmount[count] > 0)
                 {
+                    //SUBTRACT MONEY AMOUNT FROM CHANGE NEEDED
                     change_needed -= moneyAmount[count];
                     change_needed = Math.Round(change_needed, 2);
+
+                    //DECREASE THE AMOUNT OF MONEY IN DRAWER
                     drawerAmount[count] -= 1;
 
-                    Console.WriteLine($"{moneyAmount[count]:c} dispensed");//display the dispensed change
+                    //DISPLAY DISPENSED CHANGE
+                    Console.WriteLine($"{moneyAmount[count]:c} dispensed");
 
                     if (change_needed == 0)
                     {
                         Console.WriteLine("\n-----Transaction Complete-----");
 
-                    }//end nested if
+                    }//end if
                 }
+                //SKIP TO NEXT ARRAY ELEMENT IF LESS THAN ZERO STORED
                 else if (drawerAmount[count] < 0)
                 {
                     count += 2;
@@ -321,96 +165,270 @@ namespace ChangeBot1
                 }//end if              
             }//end while loop
         }//end function
-        #endregion
 
-        #region ENOUGH CHANGE
-        public static bool EnoughChange(decimal change_due, decimal[] moneyValue)
-        {
-            int i = 0;
-            //loop through to kiosk for proper change
-            while (change_due > 0)
-            {
-                if (money[i].stored == 0)
-                {
-                    i += 1;
-                }
-                else if (change_due >= moneyValue[i] && money[i].stored > 0)
-                {
-                    change_due -= (moneyValue[i]);
-                    change_due = Math.Round(change_due, 2);
-                    //subtracts array element to check for same bill/coin in case there is more than 1
-                    money[i].stored -= 1;
-                    //increments to next array element if stored is equal to zero
-                    if (money[i].stored == 0 && i != 10)
-                    {
-                        i += 1;
+        public static bool CheckEnoughChange(decimal change_due, decimal[] moneyValue) {
+            int current_slot = 0;
+            //LOOP TO CHECK KIOSK FOR PROPER CHANGE
+            while (change_due > 0) {
+                if (cashBox[current_slot].Count == 0)  {
+                    current_slot += 1;
+                } else if (change_due >= moneyValue[current_slot] && cashBox[current_slot].Count > 0) {
+                    //CHANGE DUE MINUS MONEYVALUE
+                    change_due -= (moneyValue[current_slot]);
 
-                        if (i > 10)
-                        {
+                    //DECREASE AMOUNT OF MONEY STORED
+                    cashBox[current_slot].Count -= 1;
+                    //INCREMENT TO NEXT ARRAY ELEMENT IF STORED IS EQUAL TO ZERO
+                    if (cashBox[current_slot].Count == 0 && current_slot != MAX_TENDER_SLOT) {
+                        current_slot += 1;
+                        //RETURN FALSE IF i IS INCREMENTED OVER ARRAY LENGTH
+                        if (current_slot > MAX_TENDER_SLOT) {
                             return false;
-                        }//end nested if    
+                        }//end if    
 
+                    }//end if
 
-                    }//end nested if
-
-                    //returns false if money makes it to the end of money drawer without zeroing out
-                    if (money[10].stored == 0 && i == 10)
+                    //RETURNS FALSE IF AT END OF ARRAY AND LAST ARRAY IS EQUAL TO ZERO
+                    if (cashBox[PENNY_SLOT].Count == 0 && current_slot == MAX_TENDER_SLOT)
                     {
                         return false;
-                    }//end nested if
+                    }//end if
 
-                    //returns true if change zeros out
-                    if (money[i].stored >= 0 && change_due == 0)
+                    //RETURNS TRUE IF NO CHANGE IS NEEDED AND BILL/COIN COUNT IS ZERO OR MORE
+                    if (cashBox[current_slot].Count >= 0 && change_due == 0)
                     {
-                        return true;// make bool true if no change remains and bill/coin count is zero or more
-                    }//end nested if
-                }
-                else
-                {
-                    i += 1;
-                    if (i > 10)
+                        return true;
+                    }//end if
+                }else{
+                    current_slot += 1;
+                    if (current_slot > MAX_TENDER_SLOT)
                     {
+                        //RETURN FALSE IF i IS INCREMENTED OVER ARRAY LENGTH
                         return false;
-                    }//end nested if
+                    }//end if
                 }//end if
 
             }//end while loop
             return false;
         }//end function  
-        #endregion
-
-        #region CHECK RIGHT PAYMENT AMOUNT
-        public static bool CashPaymentCheck(decimal payments, decimal[] moneyValue, int[] moneyStored)
+      
+        public static bool CheckCashPayment(decimal payments, decimal[] moneyValue, int[] moneyStored)
         {
             for (int x = 0; x < moneyValue.Length; x++)
             {
                 if (payments == moneyValue[x])
                 {
-                    moneyStored[x] += 1;//increase value of money drawer
+                    //INCREASE VALUE OF MONEY DRAWER UPON MONEY INPUT
+                    moneyStored[x] += 1;
                     return true;
                 }//end if
 
-                if (payments != moneyValue[x] && x == 10)
+                if (payments != moneyValue[x] && x == moneyValue.Length)
                 {
                     return false;
                 }//end if
             }//end for loop
             return false;
         }//end function
-        #endregion
+       
+        public static bool AcceptCard(ref decimal purchasePrice)//PASS PURCHASE PRICE BY REFERENCE(CHANGES IN FUNCTION HOW AFFECT OUTSIDE FUNCTION)
+        {
+            string cardNumber = "";
+            bool checkValidCard = false;
+            int cardFirstDigit = 0;
+            decimal cashBackPurchasePrice = 0.0m;
+            string[] bankRequest;
+            decimal bankRequestValue = 0.0m;
+            bool transactionComplete = false;
+            string cardVendor = "";
+            bool cardDeclinedHalfpayment = false;
+            string continueOrCancelTransaction = "";
 
-        #region CARD FIRST DIGIT
-        public static int CardNumberFirstDigit(long cardNum)
+            //LOOP FOR NO VALID CARD NUMBER
+            while (checkValidCard == false)
+            {
+                Console.Write("\nPlease enter your card number without any dashes or spaces!   ");
+                cardNumber = (Console.ReadLine());
+                
+                
+                //CALL FUNCTION TO GET FIRST DIGIT
+                cardFirstDigit = GetCardNumberFirstDigit(cardNumber);
+
+                //CALL FUNCTION TO CHECK VALID CARD NUMBER
+                checkValidCard = IsCardNumberValid(cardNumber);
+
+
+                if (checkValidCard == false)
+                {
+                    Console.WriteLine("Please enter a valid card number.");
+                }
+                //CALL FUNCTION CHECKVALIDCARD IF CARD IS VALID
+                else if (checkValidCard == true)
+                {
+                    cardVendor = GetCardVendor(cardFirstDigit);
+                    cashBackPurchasePrice = purchasePrice + cashBackAmount;
+
+                    //CALL BANK REQUEST FUNCTION
+                    bankRequest = MoneyRequest(cardNumber, cashBackPurchasePrice);
+
+                    if (bankRequest[1] == "declined")
+                    {
+                        Console.WriteLine("Card Declined!!!!");
+                        //DISPLAY REMAINING BALANCE MINUS CASHBACK
+                        Console.WriteLine("Remaining Balance: {0}", purchasePrice);
+                        Console.WriteLine("-----Please pay another way!-----");
+                        
+                        //SET CHECKVALIDCARD TO FALSE
+                        cardDeclinedHalfpayment = true;
+                        //return false;
+                    }
+                    else if (bankRequest[1] != "declined")
+                    {
+                        bankRequestValue = Convert.ToDecimal(bankRequest[1]);
+                       decimal formatted_bankRequestValue = Math.Round(bankRequestValue, 4);
+
+
+                        //PURCHASE COMPLETELY PAID BY CARD
+                        if (bankRequestValue > 0 && bankRequestValue == cashBackPurchasePrice)
+                        {
+                            Console.WriteLine($"Total: {cashBackAmount + purchasePrice}");
+                            Console.WriteLine("Your {0} card will be charged {1}", cardVendor, bankRequestValue);
+                            Console.WriteLine("------Transaction Complete!!!_____\n\n");
+                            return true;
+                        }
+                        //PURCHASE PARTIALLY PAID BY CARD
+                        else if (bankRequestValue > 0 && bankRequestValue != cashBackPurchasePrice)
+                        {
+
+                            /*Console.WriteLine("Your {0} card will be charged {1}", cardVendor, bankRequestValue);*/
+                            Console.WriteLine("------------Infsufficient funds!!!!!------------");
+
+                            //LOOP TO ASK CUSTOMER IF THEY WONT TO CONTINUE WITH HALF PAYMENT TRANSACTION
+                            do
+                            {
+                                Console.WriteLine("Your reamaining balance is {0}", purchasePrice);
+                                Console.Write("\n\nWould you like to continue with a debit of {0} from {1}? Please enter y or n.   ", formatted_bankRequestValue, cardVendor);
+                                continueOrCancelTransaction = Console.ReadLine();
+                                //CHANGE ALL STRING INPUTS TO LOWERCASE
+                                continueOrCancelTransaction = continueOrCancelTransaction[0].ToString().ToLower();
+                                
+                                if(continueOrCancelTransaction != "y" && continueOrCancelTransaction !="n")
+                                {
+                                    Console.WriteLine("Please enter a valid response!!!!");
+                                }
+                            } while (continueOrCancelTransaction != "y" && continueOrCancelTransaction != "n");
+
+                            if (continueOrCancelTransaction == "y")
+                            {
+                                Console.WriteLine("Your reamaing balance is {0}", purchasePrice-bankRequestValue);
+                                purchasePrice = purchasePrice - bankRequestValue;
+                               
+                                //SET CHECKVALIDCARD TO FALSE
+                                cardDeclinedHalfpayment = true;
+                                return false;
+                            }
+                            else if (continueOrCancelTransaction == "n")
+                            {
+                                Console.Clear();
+                                return true;
+                            }//end if
+                            
+                            return  false;
+                        }//end if
+                    }//end if
+                }//end if
+            }//end while
+            if(cardDeclinedHalfpayment==true)
+            {
+                checkValidCard = false;
+            }//end if
+            return transactionComplete;
+        }//end function
+
+        public static bool AcceptCash(decimal purchasePrice)
+        {
+            decimal[] moneyValue = { 100.00m, 50.00m, 20.00m, 10.00m, 5.00m, 1.00m, .50m, .25m, .10m, .05m, .01m };
+            int[] drawerBillCount = { 1, 2, 4, 5, 8, 21, 5, 20, 28, 20, 20 };
+            decimal totalPayment = 0.0m;
+            int paymentNum = 1;
+            decimal payment = 0.0m;
+            decimal remaining = 0.0m;
+            decimal changeDue = 0.0m;
+            bool transactionComplete = false;
+                       
+
+            
+            // LOOP TO ACCEPT CASH PAYMENT
+            while (totalPayment <= purchasePrice)
+            {
+                Console.Write("\n\nPayment {0}  ", paymentNum);
+                payment = Convert.ToDecimal(Console.ReadLine());
+
+
+                //CALL FUNCTION TO CHECK VALID PAYMENT AMOUNT
+                bool paymentCheck = CheckCashPayment(payment, moneyValue, drawerBillCount); //BOOL SET EQUAL TO FUNCTION CALL
+
+                if (paymentCheck == false)
+                {
+
+                    Console.WriteLine("Please enter a valid payment amount.");
+                    totalPayment = totalPayment - payment;
+                    paymentNum -= 1;
+                }//end if
+
+                totalPayment += payment;
+                //REMAINING EQUAL TO PURCHASEPRICE - TOTALPAYMENT
+                remaining = purchasePrice - totalPayment;
+                paymentNum += 1;
+
+                if (totalPayment > purchasePrice)
+                {
+                    break;//EXIT LOOP PAYMENT HIGHER THAN PURCHASEPRICE
+                }//end if 
+
+                //REMAINING CASH TO BE PAID
+                Console.Write("Remaining  {0:c}", remaining);
+            }//end while loop
+
+
+            remaining = Math.Round(remaining, 2);
+            //ABSOLUTE VALUE OF CHANGE(NO NEGATIVE SIGN)
+            changeDue = Math.Abs(remaining);
+
+            //TOTAL AMOUNT PAID
+            Console.WriteLine("\n\nTotal Cash Paid: {0}", totalPayment);
+
+            //CHANGE DUE
+            Console.Write("\nChange     {0:c}", changeDue);
+            Console.Write("\n_ _ _ _ \n\n");
+
+            //CALL ENOUGHCHANGE FUNCTION
+            bool enoughChange = CheckEnoughChange(changeDue, moneyValue);//BOOL SET TO ENOUGHCHANGE FUNCTION
+
+            if (enoughChange == false)
+            {
+                //DISPLAY MESSAGE FOR NOT ENOUGH CHANGE
+                Console.WriteLine("Kiosk does not have enough money to dispense change! Please enter another form of payment.");
+                return false;
+            }//end if                       
+            else if (enoughChange == true)
+            {
+                //DISPENSE CHANGE
+                DispenseChange(changeDue, moneyValue, drawerBillCount);
+                return true;
+            }
+            return transactionComplete; 
+        }
+        
+        public static int GetCardNumberFirstDigit(string cardNum)
         {
             int cardFirstDigit = 0;
-            //Display card vendor
+            //DISPLAY CARD VENDOR
             cardFirstDigit = (int)(cardNum.ToString()[0] - 48);
             return cardFirstDigit;
         }//end function
-        #endregion
-
-        #region CARD VENDOR
-        public static string CardVendor(long cardFirstDig)
+            
+        public static string GetCardVendor(int cardFirstDig)
         {
             if (cardFirstDig == 3)
             {
@@ -431,57 +449,51 @@ namespace ChangeBot1
             }
             else
             {
-                return "a";
+                return "***ERROR***";
             }//end if 
         }//end function
-        #endregion
-
-        #region PAY WITH CARD
-        public static bool PayWithCard(decimal purchasePrice)
-        {
+        
+        public static bool AskPayWithCard(decimal purchasePrice){
             string useCard = "";
-            do
-            {
-                //loop to check if paying with a card
-                Console.Write("\n\nWould you like to pay with a credit card? Please enter y or n.   ");
-                useCard = Console.ReadLine();
+            bool return_value = false;
 
-                //set useCard to true if customer wants to use card
-                if (useCard == "Y" || useCard == "y" || useCard == "yes" || useCard == "Yes")
-                {
-                    return true;
-                }//end if
-                 //set useCard to true if customer wants to use card
-                else if (useCard == "N" || useCard == "n" || useCard == "no" || useCard == "No")
-                {
-                    return false;
-                }//end if
-                else
-                {
+            do {
+                //LOOP TO CHECK IF PAYING WITH CARD
+                Console.Write("\n\nWould you like to pay balance with a credit card? Please enter y or n.   ");
+                useCard = Console.ReadLine();
+                useCard = useCard[0].ToString().ToLower();
+ 
+                //SET USECARD TO TRUE IF CUSTOMER WANTS TO USE CARD OTHERWISE FALSE
+                if (useCard == "y") {
+                    return_value = true;
+                }else if (useCard == "n"){
+                    return_value =  false;
+                }else{
                     Console.WriteLine("Please enter a valid response!!!!");
                 }//end if
 
-            } while (useCard != "Y" && useCard != "y" && useCard != "yes" && useCard != "Yes" && useCard != "N" && useCard != "n" && useCard != "no" && useCard != "No");//end while loop
+            } while (useCard != "y" && useCard != "n");
 
-            return false;
+            return return_value;
         }//end function
-        #endregion
-
-        #region CASH BACK
-        static bool CashBack(decimal purchasePrice)
+        
+        static bool CheckCashBack(decimal purchasePrice)
         {
             string cashBackCheck = "";
             decimal cashBackPurchasePrice = 0.0m;
 
-            //loop checking for cashback
+            //LOOP CHECKING FOR CASHBACK
             do
             {
                 Console.Write("Would you like cash back?  ");
                 cashBackCheck = Console.ReadLine();
+                cashBackCheck = cashBackCheck[0].ToString().ToLower();
 
                 if (cashBackCheck == "Y" || cashBackCheck == "y" || cashBackCheck == "yes" || cashBackCheck == "Yes")
                 {
                     Console.Write("Enter cashback amount:  ");
+
+                    //
                     cashBackAmount = Convert.ToDecimal(Console.ReadLine());
                     cashBackPurchasePrice = purchasePrice + cashBackAmount;
                     //Console.WriteLine($"Your card will be charged: {cashBackPurchasePrice}");
@@ -500,35 +512,46 @@ namespace ChangeBot1
             } while (cashBackCheck != "Y" && cashBackCheck != "y" && cashBackCheck != "yes" && cashBackCheck != "Yes" && cashBackCheck != "N" && cashBackCheck != "n" && cashBackCheck != "no" && cashBackCheck != "No");//end while loop
             return false;
         }//end function
-        #endregion
-
-        #region CHECK VALID CARD NUMBER
+               
         public static bool IsCardNumberValid(string cardNumber)
         {
-            int i, checkSum = 0;
+            bool cardValid = false;
+            int firstDigit= GetCardNumberFirstDigit(cardNumber);
 
-            // Compute checksum of every other digit starting from right-most digit
-            for (i = cardNumber.Length - 1; i >= 0; i -= 2)
-                checkSum += (cardNumber[i] - '0');
+            //CHECK TO MAKE SURE CARD STARTS WITH 3, 4, 5, OR 6
+            if (firstDigit == 3 || firstDigit == 4 || firstDigit ==5 || firstDigit == 6 ){
+                //CHECK TO MAKE SURE CARD IS BETWEEN 15 & 16 CHARACTERS
+                if (cardNumber.Length >= 15 && cardNumber.Length <= 16){
 
-            /*Now take digits not included in first checksum, multiple by two,
-            and compute checksum of resulting digits*/
-            for (i = cardNumber.Length - 2; i >= 0; i -= 2)
-            {
-                int val = ((cardNumber[i] - '0') * 2);
-                while (val > 0)
-                {
-                    checkSum += (val % 10);
-                    val /= 10;
-                }//end while loop
-            }//end for loop
+                    int i, checkSum = 0;
 
-            // Number is valid if sum of both checksums MOD 10 equals 0
-            return ((checkSum % 10) == 0);
+                    //COMPUTE CHECKSUM OF EVERY OTHER DIGIT STARTING FROM RIGHT-MOST DIGIT
+                    for (i = cardNumber.Length - 1; i >= 0; i -= 2)
+                        checkSum += (cardNumber[i] - '0');
+
+                    /*NOW TAKE DIGITS NOT INCLUDED IN FIRST CHECKSUM, MULTIPLE BY TWO, AND COMPUTE CHECKSUM OF RESULTING DIGITS*/
+                    for (i = cardNumber.Length - 2; i >= 0; i -= 2){
+                        int val = ((cardNumber[i] - '0') * 2);
+                        while (val > 0)
+                        {
+                            checkSum += (val % 10);
+                            val /= 10;
+                        }//end while loop
+                    }//end for loop
+
+                    // NUMBER IS VALID IF SUM OF BOTH CHECKSUMS MOD 10 EQUALS 0
+                    //return ((checkSum % 10) == 0);
+                    return true;
+                }
+                else{
+                    return cardValid;
+                }//end if
+            }
+            else{
+                return cardValid;
+            }//end if
         }//end function
-        #endregion
-
-        #region BANK MONEY REQUEST
+              
         static string[]MoneyRequest(string account_number, decimal amount)
         {
             Random rnd = new Random();
@@ -551,10 +574,9 @@ namespace ChangeBot1
                 else
                 {
                     return new string[] { account_number, "declined" };
-                }//end nested if
+                }//end if
             }//end if         
         }//end function
-        #endregion      
+           
     }//end program class
 }//end namespace
-
