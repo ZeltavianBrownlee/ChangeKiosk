@@ -11,7 +11,7 @@ namespace ChangeBot1
         #region GLOBAL VARIABLES
         struct Tender {
             public int Count; // how many of each is stored in the bank (upon start up)
-            public decimal Value;
+            public decimal Value;//the value of money stored in the bank(upon start up)
         }//end struct
 
         static Tender[] cashBox;
@@ -57,8 +57,8 @@ namespace ChangeBot1
                 //CALL FUNCTION TO SCAN ITEMS
                 purchasePrice = ScanItems();              
 
-            //LOOP FOR CONTINUOUS TRANSACTIONS
-            while (transactionComplete == false)
+                //LOOP FOR CONTINUOUS TRANSACTIONS
+                while (transactionComplete == false)
                 {
                     //ACCEPT CARD                
                     payCard = AskPayWithCard(purchasePrice);//CALL FUNCTION TO CHECK IF PAYING WITH A CARD
@@ -79,8 +79,7 @@ namespace ChangeBot1
                         transactionComplete = AcceptCash(purchasePrice);
                     }//end if            
                 }//end while
-
-            
+           
                 //RESET VARIABLES
                 payCard = false;
                 transactionComplete = false;
@@ -96,23 +95,33 @@ namespace ChangeBot1
             string inputPrice = "";
             decimal itemPrice = 0.0m;
             decimal purchasePrice = 0.0m;
+            bool cashVsCard;
+            bool numericNumber = false;
             Console.WriteLine("You may begin scanning your items!\n");
 
             //LOOP FOR ITEM PRICE
             do
             {
-                Console.Write("Item {0}: ", itemNum);
+                //LOOP FOR INPUT VALIDATION
+                while (numericNumber == false)
+                {
+                    Console.Write("Item {0}: ", itemNum);
 
-                //BREAK IF NO INPUT VALUE
-                inputPrice = Console.ReadLine();
+                    //BREAK IF NO INPUT VALUE
+                    inputPrice = Console.ReadLine();
+                    
+                    cashVsCard = true;
+                    numericNumber = IsNumeric(inputPrice, cashVsCard);
+                }//end while
+
+                //REINSTIALIZE TO FALSE SO LOOP WILL RUN FOR NEXT ITEM
+                numericNumber = false;
+
                 if (inputPrice == "")
                 {
-                    break;
+                    break;//BREAK OUT OF LOOP IF INPUT IS EMPTY
                 }//end if
-
-                //FORMAT DISCOUNTPRICE TO TWO DECIMAL PLACES
-                //formattedInput = string.Format("{0:0.00}", inputPrice);
-
+               
                 //INPUT INTO DECIMAL FOR CALCULATIONS
                 itemPrice = Convert.ToDecimal(inputPrice);
 
@@ -243,12 +252,18 @@ namespace ChangeBot1
             string cardVendor = "";
             bool cardDeclinedHalfpayment = false;
             string continueOrCancelTransaction = "";
-
+            bool numericNumber = false;
+            bool cash;
             //LOOP FOR NO VALID CARD NUMBER
             while (checkValidCard == false)
             {
-                Console.Write("\nPlease enter your card number without any dashes or spaces!   ");
-                cardNumber = (Console.ReadLine());
+                while (numericNumber == false)
+                {
+                    Console.Write("\nPlease enter your card number without any dashes or spaces!   ");
+                    cardNumber = (Console.ReadLine());
+                    cash = false;
+                    numericNumber = IsNumeric(cardNumber,cash);
+                }//end while
                 
                 
                 //CALL FUNCTION TO GET FIRST DIGIT
@@ -343,6 +358,35 @@ namespace ChangeBot1
                 checkValidCard = false;
             }//end if
             return transactionComplete;
+        }//end function
+
+        public static bool IsNumeric(string cardNumber, bool cashVsCard)
+        {
+            int decimalValue = 0;
+
+            for (int i = 0; i < cardNumber.Length; i++)
+            {
+                //CHECKING EACH CHAR ELEMENT OF STRING FOR NUMBER DECIMAL VALUES
+                char letter = cardNumber[i];
+
+                if (cashVsCard == false)
+                {
+                    decimalValue = (int)letter;
+                    if (decimalValue < 48 || decimalValue > 57)
+                    {
+                        return false;
+                    }//end if
+                }
+                else if (cashVsCard == true)
+                {
+                    decimalValue = (int)letter;
+                    if (decimalValue < 46 || decimalValue > 57 || decimalValue == 47)
+                    {
+                        return false;
+                    }//end if
+                }
+            }//end for
+            return true;
         }//end function
 
         public static bool AcceptCash(decimal purchasePrice)
