@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ namespace ChangeBot1
         static decimal cashBackAmount = 0.0m;
         #endregion
 
+        //DECLARE AND INTIALIZE CONSTANTS
         const int MAX_TENDER_SLOT = 10;
         const int PENNY_SLOT = 10;
         static void Main(string[] args)
@@ -41,7 +43,7 @@ namespace ChangeBot1
 
             #region  BOOT UP DATA FOR CASH DRAWER CHECK
             //SETUP BOOT UP CASH
-            while (index < 11)
+            while (index <= MAX_TENDER_SLOT)
             //STORE PRELOADED INFORMATION INTO KIOSK
             {
                 //GLOBAL MONEY DRAWER ARRAY SET TO LOCAL MONEY DRAWER
@@ -50,7 +52,6 @@ namespace ChangeBot1
                 index++;
             }
             #endregion
-
             
             while (transactionOn)//LOOP FOR MULTIPLE TRANSACTIONS
             {
@@ -61,17 +62,16 @@ namespace ChangeBot1
                 while (transactionComplete == false)
                 {
                     //ACCEPT CARD                
-                    payCard = AskPayWithCard(purchasePrice);//CALL FUNCTION TO CHECK IF PAYING WITH A CARD
+                    payCard = AskPayWithCard();//CALL FUNCTION TO CHECK IF PAYING WITH A CARD
 
                     if (payCard == true)
                     {
                         //CHECK IF CASH BACK NEEDED
-                        CheckCashBack(purchasePrice);
+                        IsCashBackNeeded(purchasePrice);
 
                         //SET BOOL EQUAL TO ACCEPTCARD FUNCTION
                         transactionComplete = AcceptCard(ref purchasePrice);//PASS PURCHASE PRICE BY REFERENCE TO GET UPDATED PURCHASE PRICE FROM FUNCTION
-                    }//end if   
-                    
+                    }   
                     //ACCEPT CASH                 
                     else if (payCard == false)
                     {
@@ -84,8 +84,8 @@ namespace ChangeBot1
                 payCard = false;
                 transactionComplete = false;
                 purchasePrice = 0.0m;
-
             }//end while loop
+
             Console.ReadKey();
         }//end main function
 
@@ -101,15 +101,13 @@ namespace ChangeBot1
 
             //LOOP FOR ITEM PRICE
             do
-            {
-                //LOOP FOR INPUT VALIDATION
+            { //LOOP FOR INPUT NUMERIC NUMBER VALIDATION
                 while (numericNumber == false)
                 {
                     Console.Write("Item {0}: ", itemNum);
-
-                    //BREAK IF NO INPUT VALUE
                     inputPrice = Console.ReadLine();
                     
+                    //Call ISNUMERIC FUNCTION
                     cashVsCard = true;
                     numericNumber = IsNumeric(inputPrice, cashVsCard);
                 }//end while
@@ -124,7 +122,6 @@ namespace ChangeBot1
                
                 //INPUT INTO DECIMAL FOR CALCULATIONS
                 itemPrice = Convert.ToDecimal(inputPrice);
-
 
                 Console.WriteLine("Please place item in bagging area!\n");
                 itemNum += 1;
@@ -157,44 +154,43 @@ namespace ChangeBot1
 
                     if (change_needed == 0)
                     {
-                        Console.WriteLine("\n-----Transaction Complete-----");
-
+                        Console.WriteLine("\n-----Transaction Complete-----\n");
                     }//end if
                 }
-                //SKIP TO NEXT ARRAY ELEMENT IF LESS THAN ZERO STORED
-                else if (drawerAmount[count] < 0)
-                {
-                    count += 2;
-                }
-
                 else
                 {
                     count += 1;
-
                 }//end if              
             }//end while loop
         }//end function
 
-        public static bool CheckEnoughChange(decimal change_due, decimal[] moneyValue) {
+        public static bool CheckEnoughChange(decimal change_due)
+        {
             int current_slot = 0;
+
             //LOOP TO CHECK KIOSK FOR PROPER CHANGE
-            while (change_due > 0) {
-                if (cashBox[current_slot].Count == 0)  {
+            while (change_due > 0) 
+            {
+                if (cashBox[current_slot].Count == 0)  
+                {
                     current_slot += 1;
-                } else if (change_due >= moneyValue[current_slot] && cashBox[current_slot].Count > 0) {
+                } 
+                else if (change_due >= cashBox[current_slot].Value && cashBox[current_slot].Count > 0)
+                {
                     //CHANGE DUE MINUS MONEYVALUE
-                    change_due -= (moneyValue[current_slot]);
+                    change_due -= (cashBox[current_slot].Value);
 
                     //DECREASE AMOUNT OF MONEY STORED
                     cashBox[current_slot].Count -= 1;
                     //INCREMENT TO NEXT ARRAY ELEMENT IF STORED IS EQUAL TO ZERO
-                    if (cashBox[current_slot].Count == 0 && current_slot != MAX_TENDER_SLOT) {
+                    if (cashBox[current_slot].Count == 0 && current_slot != MAX_TENDER_SLOT) 
+                    {
                         current_slot += 1;
                         //RETURN FALSE IF i IS INCREMENTED OVER ARRAY LENGTH
-                        if (current_slot > MAX_TENDER_SLOT) {
+                        if (current_slot > MAX_TENDER_SLOT)
+                        {
                             return false;
                         }//end if    
-
                     }//end if
 
                     //RETURNS FALSE IF AT END OF ARRAY AND LAST ARRAY IS EQUAL TO ZERO
@@ -208,7 +204,9 @@ namespace ChangeBot1
                     {
                         return true;
                     }//end if
-                }else{
+                }
+                else
+                {
                     current_slot += 1;
                     if (current_slot > MAX_TENDER_SLOT)
                     {
@@ -216,23 +214,22 @@ namespace ChangeBot1
                         return false;
                     }//end if
                 }//end if
-
             }//end while loop
             return false;
         }//end function  
       
         public static bool CheckCashPayment(decimal payments, decimal[] moneyValue, int[] moneyStored)
         {
-            for (int x = 0; x < moneyValue.Length; x++)
+            for (int index = 0; index < MAX_TENDER_SLOT; index++)
             {
-                if (payments == moneyValue[x])
+                if (payments == moneyValue[index])
                 {
                     //INCREASE VALUE OF MONEY DRAWER UPON MONEY INPUT
-                    moneyStored[x] += 1;
+                    moneyStored[index] += 1;
                     return true;
                 }//end if
 
-                if (payments != moneyValue[x] && x == moneyValue.Length)
+                if (payments != moneyValue[index] && index == MAX_TENDER_SLOT)
                 {
                     return false;
                 }//end if
@@ -252,6 +249,7 @@ namespace ChangeBot1
             string cardVendor = "";
             bool cardDeclinedHalfpayment = false;
             string continueOrCancelTransaction = "";
+            string cancelTransaction = "";
             bool numericNumber = false;
             bool cash;
             //LOOP FOR NO VALID CARD NUMBER
@@ -259,8 +257,11 @@ namespace ChangeBot1
             {
                 while (numericNumber == false)
                 {
-                    Console.Write("\nPlease enter your card number without any dashes or spaces!   ");
-                    cardNumber = (Console.ReadLine());
+                    do
+                    {
+                        Console.Write("\n---------------Please enter your card number without any dashes or spaces!   ");
+                        cardNumber = (Console.ReadLine());
+                    } while (cardNumber == "");
                     cash = false;
                     numericNumber = IsNumeric(cardNumber,cash);
                 }//end while
@@ -276,6 +277,8 @@ namespace ChangeBot1
                 if (checkValidCard == false)
                 {
                     Console.WriteLine("Please enter a valid card number.");
+                    //REINSTIALIZE TO FALSE (IF CARDNUMBER WAS NUMERIC BUT STILL TOO SHORT OR LONG)
+                    numericNumber = false;
                 }
                 //CALL FUNCTION CHECKVALIDCARD IF CARD IS VALID
                 else if (checkValidCard == true)
@@ -283,8 +286,16 @@ namespace ChangeBot1
                     cardVendor = GetCardVendor(cardFirstDigit);
                     cashBackPurchasePrice = purchasePrice + cashBackAmount;
 
+                    if (cashBackPurchasePrice == 0.0m)
+                    {
+                        Console.WriteLine("Your {0} card will be charged $0.00", cardVendor);
+                        Console.WriteLine("\n                                       !!!!!!--Transaction complete--!!!!!\n");
+                        Console.Write("\n");
+                        return true;
+                    }//end if 
+
                     //CALL BANK REQUEST FUNCTION
-                    bankRequest = MoneyRequest(cardNumber, cashBackPurchasePrice);
+                    bankRequest = MoneyRequest(cardNumber, cashBackPurchasePrice);                   
 
                     if (bankRequest[1] == "declined")
                     {
@@ -295,47 +306,51 @@ namespace ChangeBot1
                         
                         //SET CHECKVALIDCARD TO FALSE
                         cardDeclinedHalfpayment = true;
-                        //return false;
+                        
                     }
                     else if (bankRequest[1] != "declined")
                     {
                         bankRequestValue = Convert.ToDecimal(bankRequest[1]);
-                       decimal formatted_bankRequestValue = Math.Round(bankRequestValue, 4);
-
+                        //DECLARE AND INTIALIZE VARIABLE FOR FORMATTED BANKREQUESTVALUE
+                        decimal formattedBankRequestValue = Math.Round(bankRequestValue, 2);
 
                         //PURCHASE COMPLETELY PAID BY CARD
                         if (bankRequestValue > 0 && bankRequestValue == cashBackPurchasePrice)
                         {
-                            Console.WriteLine($"Total: {cashBackAmount + purchasePrice}");
+                            //Console.WriteLine($"Total: {cashBackAmount + purchasePrice}");
                             Console.WriteLine("Your {0} card will be charged {1}", cardVendor, bankRequestValue);
                             Console.WriteLine("------Transaction Complete!!!_____\n\n");
                             return true;
                         }
                         //PURCHASE PARTIALLY PAID BY CARD
                         else if (bankRequestValue > 0 && bankRequestValue != cashBackPurchasePrice)
-                        {
-
-                            /*Console.WriteLine("Your {0} card will be charged {1}", cardVendor, bankRequestValue);*/
+                        { 
                             Console.WriteLine("------------Infsufficient funds!!!!!------------");
 
                             //LOOP TO ASK CUSTOMER IF THEY WONT TO CONTINUE WITH HALF PAYMENT TRANSACTION
                             do
                             {
                                 Console.WriteLine("Your reamaining balance is {0}", purchasePrice);
-                                Console.Write("\n\nWould you like to continue with a debit of {0} from {1}? Please enter y or n.   ", formatted_bankRequestValue, cardVendor);
-                                continueOrCancelTransaction = Console.ReadLine();
+
+                                //LOOP WHILE RESPONSE IS NULL
+                                do
+                                {
+                                    Console.Write("\n\nWould you like to continue with a debit of {0} from {1}? Please enter y or n.   ", formattedBankRequestValue, cardVendor);
+                                    continueOrCancelTransaction = Console.ReadLine();
+                                } while (continueOrCancelTransaction == "");
+
                                 //CHANGE ALL STRING INPUTS TO LOWERCASE
                                 continueOrCancelTransaction = continueOrCancelTransaction[0].ToString().ToLower();
                                 
                                 if(continueOrCancelTransaction != "y" && continueOrCancelTransaction !="n")
                                 {
                                     Console.WriteLine("Please enter a valid response!!!!");
-                                }
+                                }//end if 
                             } while (continueOrCancelTransaction != "y" && continueOrCancelTransaction != "n");
 
                             if (continueOrCancelTransaction == "y")
                             {
-                                Console.WriteLine("Your reamaing balance is {0}", purchasePrice-bankRequestValue);
+                                Console.WriteLine("Your reamaing balance is {0}", purchasePrice-formattedBankRequestValue);
                                 purchasePrice = purchasePrice - bankRequestValue;
                                
                                 //SET CHECKVALIDCARD TO FALSE
@@ -344,15 +359,43 @@ namespace ChangeBot1
                             }
                             else if (continueOrCancelTransaction == "n")
                             {
-                                Console.Clear();
-                                return true;
-                            }//end if
-                            
+                                do
+                                {
+                                    //LOOP WHILE RESPONSE IS NULL
+                                    do {
+                                        //ASK IF CANCEL TRANSACTION WANTED
+                                        Console.Write("Would you like to cancel transaction?   ");
+                                        cancelTransaction = Console.ReadLine();
+                                    } while (cancelTransaction == "");
+
+                                    //CHANGE ALL STRING INPUTS TO LOWERCASE
+                                    cancelTransaction = cancelTransaction[0].ToString().ToLower();
+
+                                    //ERROR IF Y OR N NOT ENTERED
+                                    if (cancelTransaction != "y" && cancelTransaction != "n")
+                                    {
+                                        Console.WriteLine("Please enter a valid response!!!!");
+                                    }//end if
+                                }while (cancelTransaction != "y" && cancelTransaction != "n");
+
+                                //CANCEL TRANSACTION AND CLEAR CONSOLE
+                                if(cancelTransaction == "y")
+                                {
+                                    Console.Clear();
+                                    return true;
+                                }
+                                //CONTINUE TRANSACTION OFFER DIFFERENT PAYMENT METHOD
+                                else if(cancelTransaction == "n" )
+                                {
+                                    return false;
+                                }//end if 
+                            }//end if                         
                             return  false;
-                        }//end if
+                        }//end if                       
                     }//end if
                 }//end if
             }//end while
+            //REINSTIALIZE CHECKCARD TO FALSE IF CARD IS DECLINED OR HALF PAYMENT OFFERED
             if(cardDeclinedHalfpayment==true)
             {
                 checkValidCard = false;
@@ -384,7 +427,7 @@ namespace ChangeBot1
                     {
                         return false;
                     }//end if
-                }
+                }//end if 
             }//end for
             return true;
         }//end function
@@ -400,7 +443,6 @@ namespace ChangeBot1
             decimal changeDue = 0.0m;
             bool transactionComplete = false;
                        
-
             
             // LOOP TO ACCEPT CASH PAYMENT
             while (totalPayment <= purchasePrice)
@@ -414,7 +456,6 @@ namespace ChangeBot1
 
                 if (paymentCheck == false)
                 {
-
                     Console.WriteLine("Please enter a valid payment amount.");
                     totalPayment = totalPayment - payment;
                     paymentNum -= 1;
@@ -434,7 +475,6 @@ namespace ChangeBot1
                 Console.Write("Remaining  {0:c}", remaining);
             }//end while loop
 
-
             remaining = Math.Round(remaining, 2);
             //ABSOLUTE VALUE OF CHANGE(NO NEGATIVE SIGN)
             changeDue = Math.Abs(remaining);
@@ -447,7 +487,7 @@ namespace ChangeBot1
             Console.Write("\n_ _ _ _ \n\n");
 
             //CALL ENOUGHCHANGE FUNCTION
-            bool enoughChange = CheckEnoughChange(changeDue, moneyValue);//BOOL SET TO ENOUGHCHANGE FUNCTION
+            bool enoughChange = CheckEnoughChange(changeDue);//BOOL SET TO ENOUGHCHANGE FUNCTION
 
             if (enoughChange == false)
             {
@@ -460,7 +500,7 @@ namespace ChangeBot1
                 //DISPENSE CHANGE
                 DispenseChange(changeDue, moneyValue, drawerBillCount);
                 return true;
-            }
+            }//end if
             return transactionComplete; 
         }
         
@@ -497,15 +537,20 @@ namespace ChangeBot1
             }//end if 
         }//end function
         
-        public static bool AskPayWithCard(decimal purchasePrice){
+        public static bool AskPayWithCard(){
             string useCard = "";
             bool return_value = false;
 
             do {
-                //LOOP TO CHECK IF PAYING WITH CARD
-                Console.Write("\n\nWould you like to pay balance with a credit card? Please enter y or n.   ");
-                useCard = Console.ReadLine();
-                useCard = useCard[0].ToString().ToLower();
+                //LOOP WHILE RESPONSE IS NULL
+                do
+                {
+                    //LOOP TO CHECK IF PAYING WITH CARD
+                    Console.Write("\n\nWould you like to pay balance with a credit card? Please enter y or n.   ");
+                    useCard = Console.ReadLine();
+                } while (useCard == "");
+
+                useCard = useCard.ToString().ToLower();
  
                 //SET USECARD TO TRUE IF CUSTOMER WANTS TO USE CARD OTHERWISE FALSE
                 if (useCard == "y") {
@@ -521,31 +566,44 @@ namespace ChangeBot1
             return return_value;
         }//end function
         
-        static bool CheckCashBack(decimal purchasePrice)
+        static bool IsCashBackNeeded(decimal purchasePrice)
         {
             string cashBackCheck = "";
             decimal cashBackPurchasePrice = 0.0m;
+            string cashback = "";
 
-            //LOOP CHECKING FOR CASHBACK
+            //LOOP CHECKING IF CASHBACK NEEDED
             do
             {
-                Console.Write("Would you like cash back?  ");
-                cashBackCheck = Console.ReadLine();
-                cashBackCheck = cashBackCheck[0].ToString().ToLower();
-
-                if (cashBackCheck == "Y" || cashBackCheck == "y" || cashBackCheck == "yes" || cashBackCheck == "Yes")
+                //LOOP WHILE RESPONSE IS NULL
+                do
                 {
-                    Console.Write("Enter cashback amount:  ");
+                    Console.Write("Would you like cash back? Enter y or n:  ");
+                    cashBackCheck = Console.ReadLine();
+                } while (cashBackCheck == "");
 
-                    //
-                    cashBackAmount = Convert.ToDecimal(Console.ReadLine());
+                cashBackCheck = cashBackCheck.ToString().ToLower();
+
+                if  (cashBackCheck == "y")
+                {
+                    //LOOP WHILE RESPONSE IS NULL
+                    do
+                    {
+                        Console.Write("Enter cashback amount:  ");
+                        //ACCEPT CASHBACK AMOUNT
+                        cashback = Console.ReadLine();
+                    } while (cashback== "");
+
+                    cashBackAmount = Convert.ToDecimal(cashback);
+                    
                     cashBackPurchasePrice = purchasePrice + cashBackAmount;
-                    //Console.WriteLine($"Your card will be charged: {cashBackPurchasePrice}");
+                    Console.Write("\nTotal: {0}", cashBackPurchasePrice);
                     return true;
                 }
-                else if ((cashBackCheck == "N" || cashBackCheck == "n" || cashBackCheck == "no" || cashBackCheck == "No"))
+                else if (cashBackCheck == "n")
                 {
-                    cashBackPurchasePrice = purchasePrice + 0;
+                    cashBackPurchasePrice = purchasePrice;
+                    Console.Write("\nTotal: {0}", cashBackPurchasePrice);
                     return false;
                 }
                 else
@@ -553,13 +611,13 @@ namespace ChangeBot1
                     Console.WriteLine("Please enter a valid Response!!!!!!");
                 }//end if
 
-            } while (cashBackCheck != "Y" && cashBackCheck != "y" && cashBackCheck != "yes" && cashBackCheck != "Yes" && cashBackCheck != "N" && cashBackCheck != "n" && cashBackCheck != "no" && cashBackCheck != "No");//end while loop
+            } while (cashBackCheck != "y" &&  cashBackCheck != "n");//end while loop
             return false;
         }//end function
                
         public static bool IsCardNumberValid(string cardNumber)
         {
-            bool cardValid = false;
+            bool IscardValid = false;
             int firstDigit= GetCardNumberFirstDigit(cardNumber);
 
             //CHECK TO MAKE SURE CARD STARTS WITH 3, 4, 5, OR 6
@@ -584,15 +642,15 @@ namespace ChangeBot1
                     }//end for loop
 
                     // NUMBER IS VALID IF SUM OF BOTH CHECKSUMS MOD 10 EQUALS 0
-                    //return ((checkSum % 10) == 0);
+                    //if ((checkSum % 10) == 0) ;
                     return true;
                 }
                 else{
-                    return cardValid;
+                    return IscardValid;
                 }//end if
             }
             else{
-                return cardValid;
+                return IscardValid;
             }//end if
         }//end function
               
